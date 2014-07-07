@@ -1,19 +1,18 @@
 import urllib2
-import json
 from bs4 import BeautifulSoup
 
-base_url = ""
-starting_page = ""
-json_export = '{ "pages": [ \n'
+base_url = "x"
+starting_page = "ShowHome.action"
 
 index = 0
 url_list = []
 url_list.append(base_url+starting_page)
-urls_tested = []
-
+urls_tested = [] # nodes
+master_list_of_links = []
+json_links = '"links":[\n'
+master_list_of_links.append(base_url+starting_page)
 
 for url in url_list:
-  page_json = '{ "page" : \n { "url": "' + url + '", '
   urls_tested.append(url) #add this url as 'tested'
 
   req = urllib2.Request(url)
@@ -21,24 +20,36 @@ for url in url_list:
   soup = BeautifulSoup(site_html)
   # create a list of <a href> links
   all_links = soup.findAll("a", href=True)
-  page_json += '"links": ['
 
-  #filter all the links 
   filtered_links = []
   for link in all_links:
-  	if ".action" in link["href"]:  # all the .action links
-  	  filtered_links.append(link['href'])
-  	  if link["href"] not in url_list and base_url+link["href"] not in urls_tested and index < 10: # add to url_list
-  	  	url_list.append(base_url+link["href"])
+  	href = link["href"]
+
+  	if ".action" in href: 
+  	  filtered_links.append(base_url+href)
+  	  if href not in url_list and base_url+href not in urls_tested and index < 10: 
+  	  	url_list.append(base_url+href)
   	  index = index + 1
-  	elif "http" in link["href"]:  # all the outside links
-  	  filtered_links.append(link['href'])
+  	elif "http" in href:  # all the outside links
+  	  filtered_links.append(href)	
 
   for link in filtered_links:
-  	page_json += '{ "link": "' + link + '"},\n '
-  page_json += "]}\n},"
-  json_export += page_json
+  	if link not in master_list_of_links:
+  	  master_list_of_links.append(link)
+  	json_links += '{"source":'+str(master_list_of_links.index(url))+',"target":'+str(master_list_of_links.index(link))+',"value":1},\n'
 
-json_export += ']}'
-print json_export
-  
+json_links += ']'
+
+nodes = '"nodes":[\n'
+
+for url in master_list_of_links:
+	nodes += '{"name":"'+url+'","group":1},\n'
+
+nodes += '],\n'
+
+jsonResult = "{\n"
+jsonResult += nodes
+jsonResult += json_links
+jsonResult += "}"
+print jsonResult
+
